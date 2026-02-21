@@ -1,0 +1,34 @@
+name: default_demo
+version: 1
+description: Default motion and mode demo for 6-axis arm
+defaults:
+  speed_deg_s: 20.0
+  duration_s: 1.0
+steps:
+  - mode: movej
+    duration_s: 2.0
+    speed_deg_s: 18.0
+    target_deg: [0, -15, 25, 0, 10, 0]
+    comment: move to ready pose
+
+  - mode: movej
+    duration_s: 2.0
+    speed_deg_s: 18.0
+    target_deg: [10, -25, 35, 0, 15, 5]
+    comment: sweep pose A
+
+  - mode: movej
+    duration_s: 2.0
+    speed_deg_s: 18.0
+    target_deg: [-10, -20, 30, 0, 10, -5]
+    comment: sweep pose B
+
+  - mode: zerog
+    duration_s: 4.0
+    comment: hold zero-gravity for manual guidance
+
+  - mode: impedance
+    duration_s: 4.0
+    kp: [0.03, 0.06, 0.06, 0.02, 0.02, 0.015]
+    kd: [0.0015, 0.0035, 0.0035, 0.0015, 0.0015, 0.001]
+    comment: low stiffness joint impedance

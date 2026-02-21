@@ -1,0 +1,37 @@
+serial:
+  port: /dev/ttyACM0
+  baudrate: 115200
+  timeout_s: 0.05
+
+model:
+  # Set to your Linux URDF path, or choose from GUI after startup.
+  urdf_path: ""
+  # Robot axis index -> pinocchio q index.
+  joint_map: [0, 1, 2, 3, 4, 5]
+  # Sign mapping from robot to model, use -1 where direction is opposite.
+  joint_sign: [1, 1, 1, 1, 1, 1]
+  # Degree offsets applied before gravity calculation.
+  joint_offset_deg: [0, 0, 0, 0, 0, 0]
+
+control:
+  # Gravity torque (Nm) to current (A): i = tau * k_tau2i + i_bias
+  k_tau2i: [0.00, 0.35, 0.30, 0.10, 0.10, 0.08]
+  i_bias: [0, 0, 0, 0, 0, 0]
+  # Joint impedance gains in current-domain.
+  kp: [0.04, 0.08, 0.08, 0.03, 0.03, 0.02]
+  kd: [0.002, 0.004, 0.004, 0.002, 0.002, 0.0015]
+  current_limit_a: 1.5
+
+teach:
+  angle_threshold_deg: 2.0
+  time_threshold_s: 5.0
+  yaml_default_speed_deg_s: 20.0
+  yaml_default_duration_s: 1.0
+
+runtime:
+  poll_hz: 50.0
+  poll_hz_mode5: 30.0
+  poll_timeout_s: 0.12
+  alarm_throttle_s: 1.0
+  control_hz: 50.0
+  record_hz: 20.0
