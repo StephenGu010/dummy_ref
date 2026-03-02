@@ -25,6 +25,7 @@ public:
     float angleLimitMax;
     float angleLimitMin;
     uint32_t temperature = 0.0;
+    float focCurrentA = 0.0f;
     bool inverseDirection;
     uint8_t reduction;
     State state = STOP;
@@ -55,7 +56,9 @@ public:
     void EraseConfigs();
 
     void UpdateAngle();
+    void UpdateCurrent();
     void UpdateAngleCallback(float _pos, bool _isFinished);
+    void UpdateCurrentCallback(float _cur, bool _isFinished);
 
 
     // Communication protocol definitions

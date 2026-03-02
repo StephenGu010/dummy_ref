@@ -25,11 +25,17 @@ void OnCanMessage(CAN_context* canCtx, CAN_RxHeaderTypeDef* rxHeader, uint8_t* d
         /*----------------------- ↓ Add Your CAN1 Packet Protocol Here ↓ ------------------------*/
         switch (cmd)
         {
+            case 0x21:
+                if (id >= 1 && id <= 6)
+                    dummy.motorJ[id]->UpdateCurrentCallback(*(float*) (data), data[4]);
+                break;
             case 0x23:
-                dummy.motorJ[id]->UpdateAngleCallback(*(float*) (data), data[4]);
+                if (id >= 1 && id <= 6)
+                    dummy.motorJ[id]->UpdateAngleCallback(*(float*) (data), data[4]);
                 break;
             case 0x25:
-                 memcpy(&dummy.motorJ[id]->temperature, data, sizeof(uint32_t));//(uint32_t) (data);
+                if (id >= 1 && id <= 6)
+                    memcpy(&dummy.motorJ[id]->temperature, data, sizeof(uint32_t));
                 break;
             default:
                 break;

@@ -2,6 +2,15 @@
 
 extern DummyRobot dummy;
 
+static bool ParseCurrentCommand(const char* _cmd, float out[6])
+{
+    if (_cmd == nullptr || out == nullptr)
+        return false;
+
+    return sscanf(_cmd, "$%f,%f,%f,%f,%f,%f",
+                  out, out + 1, out + 2, out + 3, out + 4, out + 5) == 6;
+}
+
 static void HandleBangCommand(const char* _cmd, StreamSink &_responseChannel)
 {
     std::string s(_cmd);
@@ -31,12 +40,10 @@ static void HandleBangCommand(const char* _cmd, StreamSink &_responseChannel)
         Respond(_responseChannel, "Disabled ok");
     } else if (s.find("LEDON") != std::string::npos)
     {
-        dummy.SetLedEnable(true);
-        Respond(_responseChannel, "ok LED ON");
+        Respond(_responseChannel, "error LED_UNSUPPORTED");
     } else if (s.find("LEDOFF") != std::string::npos)
     {
-        dummy.SetLedEnable(false);
-        Respond(_responseChannel, "ok LED OFF");
+        Respond(_responseChannel, "error LED_UNSUPPORTED");
     } else if (s.find("RGBON") != std::string::npos)
     {
         dummy.SetRGBEnable(true);
@@ -134,13 +141,33 @@ static void HandleHashCommand(const char* _cmd, StreamSink &_responseChannel)
     } else if (s.find("GETENABLE") != std::string::npos)
     {
         Respond(_responseChannel, "ok %d", dummy.IsEnabled() ? 1 : 0);
+    } else if (s.find("GETICMD") != std::string::npos)
+    {
+        float currents[6] = {0, 0, 0, 0, 0, 0};
+        dummy.GetJointCurrentsCmd(currents);
+        Respond(_responseChannel, "ok ICMD %.3f %.3f %.3f %.3f %.3f %.3f",
+                currents[0], currents[1], currents[2],
+                currents[3], currents[4], currents[5]);
+    } else if (s.find("GETIMEAS") != std::string::npos)
+    {
+        float currents[6] = {0, 0, 0, 0, 0, 0};
+        dummy.GetJointCurrentsMeasured(currents);
+        Respond(_responseChannel, "ok IMEAS %.3f %.3f %.3f %.3f %.3f %.3f",
+                currents[0], currents[1], currents[2],
+                currents[3], currents[4], currents[5]);
     } else if (s.find("RGBMODE") != std::string::npos)
     {
         uint32_t mode;
         if (sscanf(_cmd, "#RGBMODE %lu", &mode) == 1)
         {
-            dummy.SetRGBMode(mode);
-            Respond(_responseChannel, "ok RGBMODE [%lu]", dummy.GetRGBMode());
+            if (mode <= 8)
+            {
+                dummy.SetRGBMode(mode);
+                Respond(_responseChannel, "ok RGBMODE [%lu]", (unsigned long) dummy.GetRGBMode());
+            } else
+            {
+                Respond(_responseChannel, "error BAD_RGBMODE");
+            }
         } else
         {
             Respond(_responseChannel, "error BAD_RGBMODE");
@@ -171,13 +198,12 @@ static void HandleHashCommand(const char* _cmd, StreamSink &_responseChannel)
         uint8_t g = 0;
         uint8_t b = 0;
         dummy.GetRGBColor(r, g, b);
-        Respond(_responseChannel, "ok %d %lu %u %u %u %d",
+        Respond(_responseChannel, "ok ENABLE %d MODE %lu COLOR %u %u %u",
                 dummy.GetRGBEnabled() ? 1 : 0,
-                dummy.GetRGBMode(),
+                (unsigned long) dummy.GetRGBMode(),
                 (unsigned int) r,
                 (unsigned int) g,
-                (unsigned int) b,
-                dummy.GetLedEnabled() ? 1 : 0);
+                (unsigned int) b);
     } else
     {
         Respond(_responseChannel, "ok");
@@ -196,13 +222,21 @@ void OnUsbAsciiCmd(const char* _cmd, size_t _len, StreamSink &_responseChannel)
     } else if (_cmd[0] == '>' || _cmd[0] == '@' || _cmd[0] == '&')
     {
         uint32_t freeSize = dummy.commandHandler.Push(_cmd);
-        Respond(_responseChannel, "%d", freeSize);
-    } else if (_cmd[0] == '$')
-    {
-        // '$' command: per-joint current setpoints in Ampere.
-        uint32_t freeSize = dummy.commandHandler.Push(_cmd);
         if (freeSize == 0xFF)
             Respond(_responseChannel, "error CMD FIFO FULL");
+        else
+            Respond(_responseChannel, "%d", freeSize);
+    } else if (_cmd[0] == '$')
+    {
+        float currents[6];
+        if (ParseCurrentCommand(_cmd, currents))
+        {
+            dummy.SetJointCurrentsCached(currents[0], currents[1], currents[2],
+                                         currents[3], currents[4], currents[5]);
+        } else
+        {
+            Respond(_responseChannel, "error BAD_CURRENT_CMD");
+        }
     }
 
 /*---------------------------- ↑ Add Your CMDs Here ↑ -----------------------------*/
@@ -221,13 +255,21 @@ void OnUart4AsciiCmd(const char* _cmd, size_t _len, StreamSink &_responseChannel
     } else if (_cmd[0] == '>' || _cmd[0] == '@' || _cmd[0] == '&')
     {
         uint32_t freeSize = dummy.commandHandler.Push(_cmd);
-        Respond(_responseChannel, "%d", freeSize);
-    } else if (_cmd[0] == '$')
-    {
-        // '$' command: per-joint current setpoints in Ampere.
-        uint32_t freeSize = dummy.commandHandler.Push(_cmd);
         if (freeSize == 0xFF)
             Respond(_responseChannel, "error CMD FIFO FULL");
+        else
+            Respond(_responseChannel, "%d", freeSize);
+    } else if (_cmd[0] == '$')
+    {
+        float currents[6];
+        if (ParseCurrentCommand(_cmd, currents))
+        {
+            dummy.SetJointCurrentsCached(currents[0], currents[1], currents[2],
+                                         currents[3], currents[4], currents[5]);
+        } else
+        {
+            Respond(_responseChannel, "error BAD_CURRENT_CMD");
+        }
     }
 /*---------------------------- ↑ Add Your CMDs Here ↑ -----------------------------*/
 }

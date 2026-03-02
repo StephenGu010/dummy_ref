@@ -105,7 +105,7 @@ public:
 
 
     // This is the pose when power on.
-    const DOF6Kinematic::Joint6D_t REST_POSE = {0, -73, 180, 0, 0, 0};
+    const DOF6Kinematic::Joint6D_t REST_POSE = {0, -72.23, 180, 0, 0, 0};
     const float DEFAULT_JOINT_SPEED = 30;  // degree/s
     const DOF6Kinematic::Joint6D_t DEFAULT_JOINT_ACCELERATION_BASES = {150, 100, 200, 200, 200, 200};
     const float DEFAULT_JOINT_ACCELERATION_LOW = 30;    // 0~100
@@ -151,8 +151,12 @@ public:
     static const char* GetCommandModeShortName(uint32_t mode);
     void SetCommandMode(uint32_t _mode);
     void SetJointCurrents(float _i1, float _i2, float _i3, float _i4, float _i5, float _i6);
+    void SetJointCurrentsCached(float _i1, float _i2, float _i3, float _i4, float _i5, float _i6);
+    void GetJointCurrentsCmd(float out[6]) const;
+    void GetJointCurrentsMeasured(float out[6]) const;
     void ZeroJointCurrents();
     void MarkCompliantCmdRx();
+    void ApplyCompliantCurrentsIfDue();
     void CompliantWatchdogTick();
 
 
@@ -216,8 +220,14 @@ private:
     DOF6Kinematic::Joint6D_t dynamicJointSpeeds = {1, 1, 1, 1, 1, 1};
     DOF6Kinematic* dof6Solver;
     float compliantCurrents[6] = {0, 0, 0, 0, 0, 0};
+    float compliantCurrentsPending[6] = {0, 0, 0, 0, 0, 0};
+    bool compliantCurrentDirty = false;
+    uint32_t compliantLastApplyMs = 0;
     uint32_t compliantLastRxMs = 0;
     bool compliantActive = false;
+    uint32_t compliantLastCurrentPollMs = 0;
+    const uint32_t COMPLIANT_APPLY_PERIOD_MS = 20;
+    const uint32_t COMPLIANT_CURRENT_POLL_MS = 50;
     const uint32_t COMPLIANT_TIMEOUT_MS = 200;
     const float COMPLIANT_CURRENT_CLAMP = 1.5f;
     bool isEnabled = false;

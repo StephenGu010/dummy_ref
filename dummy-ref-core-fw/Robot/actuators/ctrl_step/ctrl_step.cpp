@@ -273,12 +273,28 @@ void CtrlStepMotor::UpdateAngle()
 }
 
 
+void CtrlStepMotor::UpdateCurrent()
+{
+    uint8_t mode = 0x21;
+    txHeader.StdId = nodeID << 7 | mode;
+
+    CanSendMessage(get_can_ctx(hcan), canBuf, &txHeader);
+}
+
+
 void CtrlStepMotor::UpdateAngleCallback(float _pos, bool _isFinished)
 {
     state = _isFinished ? FINISH : RUNNING;
 
     float tmp = _pos / (float) reduction * 360;
     angle = inverseDirection ? -tmp : tmp;
+}
+
+
+void CtrlStepMotor::UpdateCurrentCallback(float _cur, bool _isFinished)
+{
+    state = _isFinished ? FINISH : RUNNING;
+    focCurrentA = _cur;
 }
 
 

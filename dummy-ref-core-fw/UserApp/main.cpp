@@ -41,6 +41,7 @@ void ThreadControlLoopFixUpdate(void* argument)
                     break;
                 // Compliant mode: no position holding; only angle update + current watchdog.
                 case DummyRobot::COMMAND_COMPLIANT_CURRENT:
+                    dummy.ApplyCompliantCurrentsIfDue();
                     dummy.UpdateJointAngles();
                     dummy.UpdateJointPose6D();
                     dummy.CompliantWatchdogTick();
@@ -182,6 +183,8 @@ void Main(void)
 
     // Init Robot.
     dummy.Init();
+    dummy.SetRGBEnable(true);
+    dummy.SetRGBMode(RGB::ALLWhite);
 
     // Init IMU.
     do

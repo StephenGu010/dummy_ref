@@ -30,6 +30,7 @@ public:
         ALLGreen,
         ALLBlue,
         ALLOff,
+        ALLWhite,
         CUSTOM_COLOR
     };
 
@@ -263,6 +264,11 @@ public:
                 r = 0;
                 g = 0;
                 b = 0;
+                break;
+            case ALLWhite:
+                r = 100;
+                g = 100;
+                b = 120;
                 break;
             default:
                 break;

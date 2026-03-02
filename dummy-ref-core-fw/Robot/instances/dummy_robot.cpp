@@ -168,6 +168,13 @@ bool DummyRobot::MoveL(float _x, float _y, float _z, float _a, float _b, float _
 void DummyRobot::UpdateJointAngles()
 {
     motorJ[ALL]->UpdateAngle();
+
+    uint32_t nowMs = millis();
+    if (nowMs - compliantLastCurrentPollMs >= COMPLIANT_CURRENT_POLL_MS)
+    {
+        motorJ[ALL]->UpdateCurrent();
+        compliantLastCurrentPollMs = nowMs;
+    }
 }
 
 
@@ -290,16 +297,59 @@ bool DummyRobot::GetLedEnabled()
 
 void DummyRobot::SetJointCurrents(float _i1, float _i2, float _i3, float _i4, float _i5, float _i6)
 {
+    SetJointCurrentsCached(_i1, _i2, _i3, _i4, _i5, _i6);
+    ApplyCompliantCurrentsIfDue();
+}
+
+void DummyRobot::SetJointCurrentsCached(float _i1, float _i2, float _i3, float _i4, float _i5, float _i6)
+{
     float currents[6] = {_i1, _i2, _i3, _i4, _i5, _i6};
 
     for (int i = 0; i < 6; i++)
     {
         currents[i] = ClampFloat(currents[i], -COMPLIANT_CURRENT_CLAMP, COMPLIANT_CURRENT_CLAMP);
-        compliantCurrents[i] = currents[i];
-        motorJ[i + 1]->SetCurrentSetPoint(currents[i]);
+        compliantCurrentsPending[i] = currents[i];
     }
 
+    compliantCurrentDirty = true;
     MarkCompliantCmdRx();
+}
+
+void DummyRobot::ApplyCompliantCurrentsIfDue()
+{
+    if (commandMode != COMMAND_COMPLIANT_CURRENT || !isEnabled || !compliantActive)
+        return;
+
+    uint32_t nowMs = millis();
+    if (nowMs - compliantLastApplyMs < COMPLIANT_APPLY_PERIOD_MS)
+        return;
+
+    for (int i = 0; i < 6; i++)
+    {
+        compliantCurrents[i] = ClampFloat(compliantCurrentsPending[i], -COMPLIANT_CURRENT_CLAMP, COMPLIANT_CURRENT_CLAMP);
+        motorJ[i + 1]->SetCurrentSetPoint(compliantCurrents[i]);
+    }
+
+    compliantCurrentDirty = false;
+    compliantLastApplyMs = nowMs;
+}
+
+void DummyRobot::GetJointCurrentsCmd(float out[6]) const
+{
+    if (!out)
+        return;
+
+    for (int i = 0; i < 6; i++)
+        out[i] = compliantCurrents[i];
+}
+
+void DummyRobot::GetJointCurrentsMeasured(float out[6]) const
+{
+    if (!out)
+        return;
+
+    for (int i = 1; i <= 6; i++)
+        out[i - 1] = (motorJ[i] != nullptr) ? motorJ[i]->focCurrentA : 0.0f;
 }
 
 void DummyRobot::ZeroJointCurrents()
@@ -307,9 +357,12 @@ void DummyRobot::ZeroJointCurrents()
     for (int i = 1; i <= 6; i++)
     {
         compliantCurrents[i - 1] = 0;
+        compliantCurrentsPending[i - 1] = 0;
         motorJ[i]->SetCurrentSetPoint(0);
     }
 
+    compliantCurrentDirty = false;
+    compliantLastApplyMs = millis();
     compliantActive = false;
 }
 
@@ -341,7 +394,7 @@ bool DummyRobot::GetRGBEnabled()
 
 void DummyRobot::SetRGBMode(uint32_t mode)
 {
-    const uint32_t RGB_MODE_MAX = 7;
+    const uint32_t RGB_MODE_MAX = 8;
     if (mode > RGB_MODE_MAX)
         mode = RGB_MODE_MAX;
 
@@ -446,7 +499,10 @@ void DummyRobot::SetCommandMode(uint32_t _mode)
             jointSpeedRatio = 1;
             SetJointAcceleration(DEFAULT_JOINT_ACCELERATION_LOW);
             compliantActive = false;
+            compliantCurrentDirty = false;
             compliantLastRxMs = millis();
+            compliantLastCurrentPollMs = compliantLastRxMs;
+            compliantLastApplyMs = compliantLastRxMs;
             break;
     }
 }
@@ -660,10 +716,8 @@ uint32_t DummyRobot::CommandHandler::ParseCommand(const std::string &_cmd)
 
                 if (argNum == 6)
                 {
-                    context->SetJointCurrents(currents[0], currents[1], currents[2],
-                                              currents[3], currents[4], currents[5]);
-                    Respond(*usbStreamOutputPtr, "ok");
-                    Respond(*uart4StreamOutputPtr, "ok");
+                    context->SetJointCurrentsCached(currents[0], currents[1], currents[2],
+                                                    currents[3], currents[4], currents[5]);
                 } else
                 {
                     Respond(*usbStreamOutputPtr, "error BAD_CURRENT_CMD");

@@ -34,6 +34,10 @@ void RGB::Run(RGB::Rgb_style_t mode) {
             PureColor(ALLOff);
             break;
         }
+        case ALLWhite:{
+            PureColor(ALLWhite);
+            break;
+        }
         case CUSTOM_COLOR:{
             CustomColor();
             break;
@@ -46,4 +50,3 @@ void RGB::Run(RGB::Rgb_style_t mode) {
 void RGB::Interrupt(uint8_t flag) {
     data_sentflag = flag;
 }
-
